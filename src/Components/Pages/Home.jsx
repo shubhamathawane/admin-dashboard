@@ -28,6 +28,9 @@ import {
   Search,
 } from "@mui/icons-material";
 import { Pagination, Stack } from "@mui/material";
+
+import { fetchData } from "../../axios/axios";
+
 export default function Home() {
   const [order, setOrder] = React.useState("asc");
   const [orderBy, setOrderBy] = React.useState("calories");
@@ -45,12 +48,10 @@ export default function Home() {
   React.useEffect(() => {
     const getData = async () => {
       try {
-        const apiData = await axios.get(
-          "https://geektrust.s3-ap-southeast-1.amazonaws.com/adminui-problem/members.json"
-        );
-        console.log(apiData.data);
-        setRows(apiData.data);
-        setOriginalArray(apiData.data); // Set original data array
+        await fetchData().then((res) => {
+          setRows(res.data);
+          setOriginalArray(res.data); // Set original data array
+        });
       } catch (error) {
         console.error("Error fetching data: ", error);
       }
@@ -93,7 +94,7 @@ export default function Home() {
     },
     {
       id: "email",
-      numeric: true,
+      numeric: false,
       disablePadding: false,
       label: "Email",
     },
@@ -197,7 +198,7 @@ export default function Home() {
           {numSelected > 0 && (
             <button
               onClick={handleDeleteSelected}
-              className="border rounded text-red-400 fw-sm mx-2"
+              className="rounded text-white bg-red-300 fw-sm mx-2"
             >
               <Tooltip title="Delete">
                 <DeleteOutlineRounded />
@@ -207,7 +208,9 @@ export default function Home() {
         </div>
         <div>
           {numSelected > 0 && (
-            <label className="mx-2">{numSelected} selected</label>
+            <label className="mx-2 text-gray-500">
+              {numSelected} out of {rows.length} row(s) Selected
+            </label>
           )}
         </div>
       </div>
@@ -224,13 +227,17 @@ export default function Home() {
     setOrderBy(property);
   };
 
+  const handleDeselectAllClick = () => {
+    setSelected([]);
+  };
+
   const handleSelectAllClick = (event) => {
     if (event.target.checked) {
       const newSelected = visibleRows.map((n) => n.id);
       setSelected(newSelected);
-      return;
+    } else {
+      handleDeselectAllClick();
     }
-    setSelected([]);
   };
 
   const handleClick = (event, id) => {
@@ -320,12 +327,10 @@ export default function Home() {
     // setRows([updatedRows]);
 
     setEditRowId(null);
-    const updatedRows = rows.map((row) =>
+    const updatedRows = originalArray.map((row) =>
       row.id === id ? editedRows.find((editedRow) => editedRow.id === id) : row
     );
-
-    console.log("updated row", updatedRows);
-
+    setOriginalArray(updatedRows);
     setRows(updatedRows);
   };
 
@@ -344,29 +349,29 @@ export default function Home() {
   );
 
   return (
-    <div className="container">
-      <div className="flex items-around justify-center">
+    <div className="flex items-center justify-center">
+      <div className="p-4 lg:w-11/12">
         <div>
-          <Paper sx={{ width: "100%", mb: 2 }}>
-            <div className="flex items-around justify-center">
-              <div className="flex">
-                <form onSubmit={(e) => handleSearch(e)}>
-                  <input
-                    className="border rounded px-2"
-                    type="text"
-                    placeholder="Search"
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                  <button
-                    className="text-gray-600 mx-2"
-                    onClick={(e) => handleSearch(e)}
-                  >
-                    <Search />
-                  </button>
-                </form>
-                <EnhancedTableToolbar numSelected={selected.length} />
-              </div>
+          <div className="flex mb-3">
+            <div className="flex">
+              <form onSubmit={(e) => handleSearch(e)}>
+                <input
+                  className="border rounded px-2"
+                  type="text"
+                  placeholder="Search"
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+                <button
+                  className="text-gray-600 mx-2"
+                  onClick={(e) => handleSearch(e)}
+                >
+                  <Search />
+                </button>
+              </form>
+              <EnhancedTableToolbar numSelected={selected.length} />
             </div>
+          </div>
+          <Paper sx={{ width: "100%", mb: 2 }}>
             <TableContainer>
               <Table
                 sx={{ minWidth: 750 }}
@@ -428,7 +433,7 @@ export default function Home() {
                             <>{row.name}</>
                           )}
                         </TableCell>
-                        <TableCell align="right">
+                        <TableCell align="left">
                           {editRowId == row.id ? (
                             <>
                               {" "}
@@ -524,23 +529,27 @@ export default function Home() {
                 </TableBody>
               </Table>
             </TableContainer>
-            {/* <TablePagination
-          rowsPerPageOptions={[5, 10, 25]}
-          component="div"
-          count={rows.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handleChangePage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-        /> */}
-            <div>
+            <div className="float-right mt-2">
+              <TablePagination
+                rowsPerPageOptions={[5, 10, 25]}
+                component="div"
+                count={rows.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={handleChangePage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+              />
               <Stack spacing={3}>
                 <Pagination
-                  onChange={handleChangePage}
+                  rowsPerPageOptions={[5, 10, 25]}
+                  component="div"
                   count={visibleRows.length}
+                  rowsPerPage={rowsPerPage}
                   page={page}
-                  showFirstButton
+                  onChange={handleChangePage}
                   showLastButton
+                  showFirstButton
+                  onRowsPerPageChange={handleChangeRowsPerPage}
                 />
               </Stack>
             </div>
